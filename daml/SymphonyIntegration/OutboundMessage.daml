@@ -9,7 +9,7 @@ module SymphonyIntegration.OutboundMessage where
 template OutboundMessage
   with
     integrationParty : Party
-    symphonyChannel  : Text
+    symphonyStreamId : Text
     messageText      : Text
     attemptCount     : Int
   where
@@ -26,7 +26,7 @@ template OutboundMessageChannel
     integrationParty : Party
     sender           : Party
     channelName      : Text
-    symphonyChannel  : Text
+    symphonyStreamId : Text
   where
     signatory integrationParty
 
@@ -40,7 +40,7 @@ template OutboundMessageChannel
             do
               create OutboundMessage with
                 integrationParty
-                symphonyChannel
+                symphonyStreamId
                 messageText
                 attemptCount = 0
 

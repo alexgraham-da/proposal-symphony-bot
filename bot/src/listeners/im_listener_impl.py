@@ -7,7 +7,7 @@ from dazl import create
 
 class SYMPHONY:
     InboundDirectMessage = 'SymphonyIntegration.InboundDirectMessage.InboundDirectMessage'
-    OutboundDirectMessage = 'SymphonyIntegration.OutboundDirectMessage:OutboundDirectMessage'
+    OutboundMessage = 'SymphonyIntegration.OutboundMessage:OutboundMessage'
 
 class IMListenerImpl(IMListener):
     def __init__(self, sym_bot_client, integration_party, dazl_client):
@@ -30,11 +30,18 @@ class IMListenerImpl(IMListener):
                     'integrationParty': self.integration_party,
                     'symphonyChannel': first_name,
                     'symphonyUser': first_name,
+                    'symphonyStreamId': stream_id,
                     'messageText': msg_text})
+
+        self.dazl_client.submit_create(SYMPHONY.OutboundMessage, {
+                    'integrationParty': self.integration_party,
+                    'symphonyStreamId':stream_id,
+                    'messageText': message,
+                    'attemptCount': 0})
 
         # self.dazl_client.submit(commands)
 
-        await self.bot_client.get_message_client().send_msg_async(stream_id, dict(message=message))
+        # await self.bot_client.get_message_client().send_msg_async(stream_id, dict(message=message))
 
     async def on_im_created(self, im_created):
-        logging.debug('IM created', im_created)
+        logging.debug('IM created %s', im_created)

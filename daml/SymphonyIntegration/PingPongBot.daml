@@ -23,6 +23,6 @@ template PingPongBot
 
           create OutboundMessage with
             integrationParty
-            symphonyChannel = pingMessage.symphonyChannel
+            symphonyStreamId = pingMessage.symphonyStreamId
             messageText="PONG! (I see this from you: " <> pingMessage.messageText <> ")"
             attemptCount=0

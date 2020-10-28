@@ -15,6 +15,11 @@ from listeners.elements_listener_impl import ElementsListenerImpl
 import dazl
 from dazl import exercise
 
+dazl.setup_default_logger(logging.INFO)
+
+class SYMPHONY:
+    InboundDirectMessage = 'SymphonyIntegration.InboundDirectMessage.InboundDirectMessage'
+    OutboundMessage = 'SymphonyIntegration.OutboundMessage:OutboundMessage'
 
 def configure_logging():
     log_dir = os.path.join(os.path.dirname(__file__), "logs")
@@ -33,61 +38,79 @@ def main():
     url = os.getenv('DAML_LEDGER_URL')
     network = dazl.Network()
     network.set_config(url=url)
-
-    # dazl_client = network.aio_party(integration_party)
-    with dazl.simple_client(url, integration_party) as dazl_client:
-        dazl_client.ready()
-
     # Configure log
-        configure_logging()
+    configure_logging()
 
-        # Load configuration
-        configure = SymConfig('../resources/config.json')
-        configure.load_config()
+    # Load configuration
+    configure = SymConfig('../resources/config.json')
+    configure.load_config()
 
-        # Authenticate based on authType in config
-        if ('authType' not in configure.data or configure.data['authType'] == 'rsa'):
-            print('Python Client runs using RSA authentication')
-            auth = SymBotRSAAuth(configure)
-        else:
-            print('Python Client runs using certificate authentication')
-            auth = Auth(configure)
-        auth.authenticate()
+    # Authenticate based on authType in config
+    if ('authType' not in configure.data or configure.data['authType'] == 'rsa'):
+        print('Python Client runs using RSA authentication')
+        auth = SymBotRSAAuth(configure)
+    else:
+        print('Python Client runs using certificate authentication')
+        auth = Auth(configure)
+    auth.authenticate()
 
-        # Initialize SymBotClient with auth and configure objects
-        bot_client = SymBotClient(auth, configure)
+    # Initialize SymBotClient with auth and configure objects
+    bot_client = SymBotClient(auth, configure)
 
-        # Initialize datafeed service
-        datafeed_event_service = bot_client.get_async_datafeed_event_service()
+    # Initialize datafeed service
+    datafeed_event_service = bot_client.get_async_datafeed_event_service()
 
-        # Initialize listener objects and append them to datafeed_event_service
-        # Datafeed_event_service polls the datafeed and the event listeners
-        # respond to the respective types of events
-        datafeed_event_service.add_im_listener(IMListenerImpl(bot_client, integration_party, dazl_client))
-        datafeed_event_service.add_room_listener(RoomListenerImpl(bot_client))
-        datafeed_event_service.add_elements_listener(ElementsListenerImpl(bot_client))
+    async_client = makeClient(network, integration_party, bot_client)
 
-        async_client = network.aio_party(integration_party)
-
-        @async_client.ledger_ready()
-        def say_hello(event):
-            logging.info("DA Marketplace matching engine is ready!")
+    # Initialize listener objects and append them to datafeed_event_service
+    # Datafeed_event_service polls the datafeed and the event listeners
+    # respond to the respective types of events
+    datafeed_event_service.add_im_listener(IMListenerImpl(bot_client, integration_party, async_client))
+    datafeed_event_service.add_room_listener(RoomListenerImpl(bot_client))
+    datafeed_event_service.add_elements_listener(ElementsListenerImpl(bot_client))
 
 
-        # Create and read the datafeed
-        print('Starting datafeed')
-        message = '<messageML>Hello {first_name}, hope you are doing well!</messageML>'
-        stream_id = 'JrsGM0ecerH87Bek5Evcgn___oqaZ0pOdA'
+    # network.run_forever()
+
+    # Create and read the datafeed
+    print('Starting datafeed')
+    # message = '<messageML>Hello {first_name}, hope you are doing well!</messageML>'
+    # stream_id = 'JrsGM0ecerH87Bek5Evcgn___oqaZ0pOdA'
+    # bot_client.get_message_client().send_msg(stream_id, dict(message=message))
+    # datafeed_event_service.start_datafeed()
+    try:
+        # async network.aio_run()
+        loop = asyncio.get_event_loop()
+        # loop.run_until_complete(datafeed_event_service.start_datafeed())
+        # session_task = asyncio.create_task(request_session(env.apiKey, env.secret))
+
+        # group = asyncio.gather(*[datafeed_event_service.start_datafeed(), network.aio_run()])
+        group = asyncio.gather(*[datafeed_event_service.start_datafeed(), network.aio_run()])
+        loop.run_until_complete(group)
+        # network.run_forever()
+        print ('try')
+    except (KeyboardInterrupt, SystemExit):
+        None
+    except:
+        raise
+
+def makeClient(network, party, bot_client):
+    client = network.aio_party(party)
+
+    @client.ledger_ready()
+    def say_hello(event):
+        logging.info("DA Marketplace matching engine is ready!")
+
+    @client.ledger_created(SYMPHONY.OutboundMessage)
+    def handle_outbound_message(event):
+        cid = event.cid
+        message = event.cdata['messageText']
+        stream_id = event.cdata['symphonyStreamId']
         bot_client.get_message_client().send_msg(stream_id, dict(message=message))
-        try:
-            # loop = asyncio.get_event_loop()
-            # loop.run_until_complete(datafeed_event_service.start_datafeed())
-            # network.run_until_complete()
-            print ('try')
-        except (KeyboardInterrupt, SystemExit):
-            None
-        except:
-            raise
+        return [exercise(event.cid, 'Archive', {})]
+
+    return client
+
 
 
 if __name__ == "__main__":

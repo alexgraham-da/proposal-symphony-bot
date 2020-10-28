@@ -5,6 +5,7 @@ template InboundDirectMessage
     integrationParty : Party
     symphonyChannel : Text
     symphonyUser : Text
+    symphonyStreamId : Text
     messageText : Text
   where
     signatory integrationParty
