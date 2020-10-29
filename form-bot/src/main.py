@@ -36,6 +36,7 @@ def main():
     url = os.getenv('DAML_LEDGER_URL')
     network = dazl.Network()
     network.set_config(url=url)
+
     # Configure log
     configure_logging()
 
@@ -67,26 +68,10 @@ def main():
     datafeed_event_service.add_room_listener(RoomListenerImpl(bot_client))
     datafeed_event_service.add_elements_listener(ElementsListenerImpl(bot_client, async_client, integration_party))
 
-
-    # network.run_forever()
-
-    # Create and read the datafeed
-    print('Starting datafeed')
-    # message = '<messageML>Hello {first_name}, hope you are doing well!</messageML>'
-    # stream_id = 'JrsGM0ecerH87Bek5Evcgn___oqaZ0pOdA'
-    # bot_client.get_message_client().send_msg(stream_id, dict(message=message))
-    # datafeed_event_service.start_datafeed()
     try:
-        # async network.aio_run()
         loop = asyncio.get_event_loop()
-        # loop.run_until_complete(datafeed_event_service.start_datafeed())
-        # session_task = asyncio.create_task(request_session(env.apiKey, env.secret))
-
-        # group = asyncio.gather(*[datafeed_event_service.start_datafeed(), network.aio_run()])
         group = asyncio.gather(*[datafeed_event_service.start_datafeed(), network.aio_run()])
         loop.run_until_complete(group)
-        # network.run_forever()
-        print ('try')
     except (KeyboardInterrupt, SystemExit):
         None
     except:
@@ -111,10 +96,10 @@ def makeClient(network, party, bot_client):
     def handle_proposal(event):
         cid = event.cid
         text = event.cdata['proposalText']
+        bot_client.get_message_client().send_msg(stream_id, dict(message=message))
+
 
     return client
-
-
 
 if __name__ == "__main__":
     main()
